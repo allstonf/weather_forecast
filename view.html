@@ -1,0 +1,199 @@
+<html>
+
+<head profile="http://www.w3.org/2005/10/profile">
+    <title>DSC 190 Group 07</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" type="text/css" href="tables.css">
+    <style>
+    	html, body, h1, h2, h3, h4, h5 {
+		font-family: "Open Sans", sans-serif
+    	}
+    </style>
+</head>
+
+<body class="w3-theme-l5">
+    <div class="w3-container w3-card w3-white w3-round w3-margin-right w3-margin-left"><br>
+        <h4>DSC190 IoT Group 07 - Name: 7</h4><br>
+	<h4>IOT Devices Table</h4>
+        <span class="w3-right w3-opacity" style="margin:5px 5px">5 Sec</span>
+        <div class="w3-row-padding" style="margin:3px -16px">
+            <table class="tableList" id="devicesTable">
+                <thead>
+                    <tr>
+                        <th>Time Last Checked In</th>
+                        <th>MAC</th>
+                        <th>Status </th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+            <br>
+        </div>
+
+	<br><h4>BLE Logs Table</h4>
+        <span class="w3-right w3-opacity" style="margin:5px 5px">7 Sec</span>
+        <div class="w3-row-padding" style="margin:3px -16px">
+            <table class="tableList" id="bleTable">
+                <thead>
+                    <tr>
+                        <th>Time Logged </th>
+                        <th>Device Mac </th>
+                        <th>BLE MAC </th>
+                        <th>RSSI </th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+            <br>
+        </div>
+    </div>
+    <br>
+    <span id="debugStr"></span>
+
+    <script>
+    var devicesTimer, bleTimer;
+
+    var devicesTable = document.getElementById('devicesTable');
+    var bleTable = document.getElementById('bleTable')
+
+    // now continuously get server updates
+    devicesTimer = setInterval(updateDevices, 5000); // 5 seconds
+    bleTimer     = setInterval(updateBle    , 7000); // 7 seconds
+
+    // get activity update
+    updateDevices();
+    updateBle();
+
+    //============== UPDATE Students TABLE =================
+    function clearTable(table) {
+
+        // clear all except first row
+        var x = table.rows.length;
+        for (var i = x - 1; i > 0; i--)
+            table.deleteRow(i);
+
+    }
+
+    function refreshDevices(s) {
+
+        var row = devicesTable.insertRow();
+
+        var cellLastseen = row.insertCell(0);
+        var cellMac = row.insertCell(1);
+        var cellStatus = row.insertCell(2);
+
+        // fill cells:
+        cellLastseen.innerHTML = s.lastseen;
+        cellMac.innerHTML = s.mac;
+        if (s.status == 'OK') {
+            cellStatus.innerHTML = s.status;
+            cellStatus.className = 'w3-text-green';
+        } else if (s.status == 'ERROR') {
+            cellStatus.innerHTML = s.status;
+            cellStatus.className = 'w3-text-red';
+        } else if (s.status == 'TIMEOUT') {
+            cellStatus.innerHTML = s.status;
+            cellStatus.className = 'w3-text-yellow';
+        } else if (s.status == 'WARNING') {
+            cellStatus.innerHTML = s.status;
+            cellStatus.className = 'w3-text-blue';
+        } else if (s.status == 'ACTIVE') {
+            cellStatus.innerHTML = 'OK';
+            cellStatus.className = 'w3-text-green';
+	} else {
+            cellStatus.innerHTML = s.status;
+        }
+
+    }
+
+
+    function refreshBle(s) {
+        var row = bleTable.insertRow();
+
+        // insert each cell value
+        var cellTime = row.insertCell(0);
+        var cellDevmac = row.insertCell(1);
+        var cellBlemac = row.insertCell(2);
+        var cellRssi = row.insertCell(3);
+        cellTime.innerHTML = s.timestamp;
+        cellDevmac.innerHTML = s.devmac;
+        cellBlemac.innerHTML = s.blemac;
+        cellRssi.innerHTML = s.blerssi;
+    }
+
+    // load the status of all table entries
+    function updateDevices() {
+
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                //console.log("this");
+                //console.log(this);
+                //console.log("this.responseText:");
+                //console.log(this.responseText);
+                var statsObj = JSON.parse(this.responseText);
+                clearTable(devicesTable);
+                // got data
+                // lets loop thru and fill in the data
+                statsObj.devices.forEach(refreshDevices);
+            }
+        };
+
+        var jObj;
+
+        jObj = { cmd: "LIST" , gid: "7"};
+
+        var jStr = JSON.stringify(jObj);
+
+        //debugStr(jStr);
+
+        var urlStr = "http://dsc-iot.ucsd.edu/api_gid07/API.py";
+        xmlhttp.open("POST", urlStr, true);
+        xmlhttp.setRequestHeader('Content-Type', 'application/json');
+        xmlhttp.send(jStr);
+    }
+
+    // load the status of all table entries
+    function updateBle() {
+
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                //console.log("this");
+                //console.log(this);
+                //console.log("this.responseText:");
+                //console.log(this.responseText);
+                var statsObj = JSON.parse(this.responseText);
+                clearTable(bleTable);
+                // got data
+                // lets loop thru and fill in the data
+                statsObj.blelogs.forEach(refreshBle);
+            }
+        };
+
+        var jObj;
+
+        jObj = { cmd: "BLELOG" };
+
+        var jStr = JSON.stringify(jObj);
+
+        //debugStr(jStr);
+
+        var urlStr = "http://dsc-iot.ucsd.edu/api_gid07/API.py";
+        xmlhttp.open("POST", urlStr, true);
+        xmlhttp.setRequestHeader('Content-Type', 'application/json');
+        xmlhttp.send(jStr);
+    }
+
+    function debugStr(str) {
+        var x = document.getElementById("debugStr");
+        x.innerHTML = str;
+    }
+    </script>
+</body>
+
+</html>
